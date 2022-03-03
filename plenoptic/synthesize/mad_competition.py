@@ -45,7 +45,7 @@ class MADCompetition(Synthesis):
         and returns a scalar.
     synthesis_target :
         Whether you wish to minimize or maximize ``synthesis_metric``.
-    initial_noise :
+    initial_image :
         If a float, the MSE between our initial ``synthesized_signal`` and
         ``reference_signal`` (created with Gaussian noise). If a Tensor,
         the initial ``synthesized_signal`` we use.
@@ -98,7 +98,7 @@ class MADCompetition(Synthesis):
                  synthesis_metric: Union[torch.nn.Module, Callable[[Tensor, Tensor], Tensor]],
                  fixed_metric: Union[torch.nn.Module, Callable[[Tensor, Tensor], Tensor]],
                  synthesis_target: Literal['min', 'max'],
-                 initial_noise: Union[float, Tensor] = .1,
+                 initial_image: Union[float, Tensor] = .1,
                  metric_tradeoff_lambda: Union[None, float] = None,
                  range_penalty_lambda: float = .1,
                  allowed_range: Tuple[float] = (0, 1),):
@@ -132,7 +132,7 @@ class MADCompetition(Synthesis):
         self.pixel_change = []
         self.range_penalty_lambda = range_penalty_lambda
         self.allowed_range = allowed_range
-        self._init_synthesized_signal(initial_noise)
+        self._init_synthesized_signal(initial_image)
         # If no metric_tradeoff_lambda is specified, pick one that gets them to
         # approximately the same magnitude
         if metric_tradeoff_lambda is None:
@@ -148,7 +148,7 @@ class MADCompetition(Synthesis):
         self.saved_signal = []
 
     def _init_synthesized_signal(self,
-                                 initial_noise: Union[float, Tensor] = .1):
+                                 initial_image: Union[float, Tensor] = .1):
         """Initialize the synthesized image.
 
         Initialize ``self.synthesized_signal`` attribute to be a
@@ -157,28 +157,28 @@ class MADCompetition(Synthesis):
 
         Parameters
         ----------
-        initial_noise :
+        initial_image :
             If a float, the MSE between our initial ``synthesized_signal`` and
             ``reference_signal`` (created with Gaussian noise). If a Tensor,
             the initial ``synthesized_signal`` we use.
 
         """
-        if isinstance(initial_noise, float):
+        if isinstance(initial_image, float):
             # this lets us set the noise a bit more precisely
             noise = 20 * torch.randn_like(self.reference_signal)
             noise = noise - noise.mean()
-            noise = noise * np.sqrt(initial_noise / np.square(noise).mean())
+            noise = noise * np.sqrt(initial_image / np.square(noise).mean())
             synthesized_signal = self.reference_signal + noise
             synthesized_signal = synthesized_signal.clamp(*self.allowed_range)
         else:
-            if initial_noise.ndimension() < 4:
-                raise Exception("initial_noise must be torch.Size([n_batch"
+            if initial_image.ndimension() < 4:
+                raise Exception("initial_image must be torch.Size([n_batch"
                                 ", n_channels, im_height, im_width]) but got "
-                                f"{initial_noise.size()}")
-            if initial_noise.size() != self.reference_signal.size():
-                raise Exception("initial_noise and target_signal must be"
+                                f"{initial_image.size()}")
+            if initial_image.size() != self.reference_signal.size():
+                raise Exception("initial_image and target_signal must be"
                                 " same size!")
-            synthesized_signal = initial_noise.clone()
+            synthesized_signal = initial_image.clone()
         self.initial_signal = synthesized_signal.clone()
         synthesized_signal.requires_grad_()
         self.synthesized_signal = synthesized_signal
